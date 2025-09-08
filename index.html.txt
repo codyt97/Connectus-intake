@@ -1,4 +1,3 @@
-Part1:
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1614,8 +1613,6 @@ function buildCSV(){
     val('reqShipDate'), val('expShipDate'), val('notes')
   ];
 
-Part 2:
-
   const acc = [ val('accSku'), val('accDesc'), val('accQty'), val('accSell'), (document.getElementById('bcInclude').checked?'Yes':'No') ];
   const svc = [
     bool('svcEnabled')?'Yes':'No',
@@ -2187,4 +2184,5 @@ function downloadSaleOrderLineCSV(){
 </script>
 
 </body>
+
 </html>
