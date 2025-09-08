@@ -43,6 +43,8 @@
   /* inline label above inputs keeps existing input styling */
   .field label{margin-bottom:6px}
 
+
+
   /* ===== Main Tabs ===== */
   .maintabs{position:sticky; top:0; z-index:50; display:flex; gap:10px; align-items:center;
     padding:10px 16px; margin:-10px -16px 14px; background:#fffffff2;
@@ -2186,3 +2188,4 @@ function downloadSaleOrderLineCSV(){
 </body>
 
 </html>
+
