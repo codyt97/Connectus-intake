@@ -1096,12 +1096,6 @@ document.getElementById('flagNewCustomer').addEventListener('change', e=>{
 
 const APPS_SCRIPT_URL = "https://script.google.com/a/macros/connectuscorp.com/s/AKfycby2oblA3ncS5-UsJV7_zYySBYTXvxtAXLt3UJvw3qUHcKDkVtXC-2BfvRNys1Kh0LZfAA/exec"; // your real /exec link
 
-async function searchOrderTimeCustomers(q) {
-  const url = APPS_SCRIPT_URL + '?mode=proxy&q=' + encodeURIComponent(q);
-  const res = await fetch(url, { method: 'GET' });
-  if (!res.ok) throw new Error('Proxy error ' + res.status);
-  return await res.json();
-}
 
 /* ===== WCP helper ===== */
 // Put this near the top with your other config
