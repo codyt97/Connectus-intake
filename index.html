@@ -1108,19 +1108,6 @@ async function searchOrderTimeCustomers(q) {
   return await res.json();
 }
 
-/* ===== WCP helper ===== */
-async function openOTSearch(){
-  const q = (document.getElementById('wcpQuery').value || document.getElementById('billCompany').value || '').trim();
-  if (!q) { alert('Enter a company name first.'); return; }
-
-  try {
-    const results = await searchOrderTimeCustomers(q);
-    if (!Array.isArray(results)) throw new Error('Unexpected response');
-
-    if (results.length === 0) {
-      alert('No customers found.');
-      return;
-    }
 
     // Use the first match. If your proxy returns a different shape,
     // map it here before applying.
