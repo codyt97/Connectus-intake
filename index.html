@@ -1081,7 +1081,10 @@ function openDrawer(id){ document.getElementById(id).classList.add('active'); }
 function closeDrawer(id){ document.getElementById(id).classList.remove('active'); }
 
 /* WCP open behavior */
-document.getElementById('flagWCP').addEventListener('change', e=>{ /* no-op */ });
+document.getElementById('flagWCP').addEventListener('change', e=>{
+  if (e.target.checked) openDrawer('drawerWCP');
+});
+
 document.getElementById('flagCurrentCustomer').addEventListener('change', e=>{ if(e.target.checked) openDrawer('drawerWCP'); });
 document.getElementById('flag3PL').addEventListener('change', e=>{ if(e.target.checked) openDrawer('drawerWCP'); });
 
@@ -1107,20 +1110,6 @@ async function searchOrderTimeCustomers(q) {
   return await res.json();
 }
 
-
-    // Use the first match. If your proxy returns a different shape,
-    // map it here before applying.
-    const first = results[0];
-
-    // Show it in the drawer textarea (so you can review/edit if needed),
-    // then apply it to the form.
-    document.getElementById('wcpPaste').value = JSON.stringify(first, null, 2);
-    applyPastedCustomer('wcpPaste');
-  } catch (err) {
-    console.error(err);
-    alert('Error searching customers: ' + err.message);
-  }
-}
 
 function applyPastedCustomer(textareaId){
   const raw=document.getElementById(textareaId).value.trim();
@@ -1300,6 +1289,43 @@ function updateOrderModeUI() {
     lockIntakeTabs();
   }
 }
+
+  // --- Mode & Type wiring: show rows and unlock tabs properly
+function handleModeChange(val){
+  ORDER_MODE = val;          // 'new' | 'clone'
+  ORDER_TYPE = null;         // reset type when mode flips
+  updateOrderModeUI();       // shows the "type" row or the "clone" checklist
+  // keep tabs locked until type is chosen in NEW mode
+  if (ORDER_MODE !== 'new') {
+    unlockIntakeTabs();      // cloning doesn't need a type; show tabs
+  } else {
+    lockIntakeTabs();        // wait for Hardware/Pro
+  }
+  updateTypeDependentUI();   // apply MDM/Services visibility
+  maybeShowEmailOMInline();
+}
+function handleTypeChange(val){
+  ORDER_TYPE = val;          // 'hardware' | 'pro'
+  unlockIntakeTabs();        // NOW we can use the tabs
+  updateTypeDependentUI();   // hide/show MDM + Services bits
+  maybeShowEmailOMInline();
+}
+
+// Attach listeners
+document.querySelectorAll('input[name="order_mode"]').forEach(r=>{
+  r.addEventListener('change', ()=>handleModeChange(r.value));
+});
+document.querySelectorAll('input[name="order_type"]').forEach(r=>{
+  r.addEventListener('change', ()=>handleTypeChange(r.value));
+});
+
+// On load, apply current state (in case radios are pre-checked by the browser)
+document.addEventListener('DOMContentLoaded', ()=>{
+  const modeSel = document.querySelector('input[name="order_mode"]:checked');
+  const typeSel = document.querySelector('input[name="order_type"]:checked');
+  if (modeSel) handleModeChange(modeSel.value);
+  if (typeSel && ORDER_MODE === 'new') handleTypeChange(typeSel.value);
+});
 
 /* ===== Items: addRow (base) ===== */
 function addRow(prefill){
