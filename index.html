@@ -2227,10 +2227,15 @@ function downloadSaleOrderHeaderCSV(){
   const csv  = _toCSV(SO_HEADER_COLUMNS, rows);
   _downloadBlob('Sales_Order_Header.csv', csv);
 }
+function downloadSaleOrderHeaderCSV(){
+  const rows = collectHeaderRows();
+  const csv  = _toCSV(SO_HEADER_COLUMNS, rows);
+  _downloadBlob('Sales_Order_Header.csv', csv);
+}
 function downloadSaleOrderLineCSV(){
   const rows = collectLineRows();
   const csv  = _toCSV(SO_LINE_COLUMNS, rows);
-  _downloadBlob('Sales_Order_Line.csv', csv);
+  _downloadBlob('Sales_Order_Lines.csv', csv);
 }
 </script>
 
