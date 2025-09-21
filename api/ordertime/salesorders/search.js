@@ -1,51 +1,34 @@
+import { otList } from '../_client';
+
+function toSOCard(x) {
+  return {
+    id: x.Id,
+    docNo: x.DocNumber || x.Number || x.DocNo || '',
+    status: x.Status || x.DocStatus || '',
+    customer: x.CustomerRef?.Name || '',
+    date: x.TxnDate || x.Date || '',
+    total: x.Total || x.GrandTotal || 0,
+  };
+}
+
 export default async function handler(req, res) {
-  const BASE = process.env.OT_BASE_URL;
-  const KEY  = process.env.OT_API_KEY;
-
   try {
-    const q = String(req.query.q || '').trim();
-    if (!q) return res.status(200).json({ results: [] });
+    const q = (req.query.q || '').trim();
+    if (!q) return res.status(400).json({ error: 'Missing q' });
 
-    const like = (prop) => ({
-      PropertyName: prop,
-      FieldType: 1,      // String
-      Operator: 12,      // Like
-      FilterValueArray: `%${q}%`
-    });
+    const filtersByDoc = [{ PropertyName: 'DocNumber', Operator: 12, FilterValueArray: q }]; // LIKE
+    const filtersByCust = [{ PropertyName: 'CustomerRef.Name', Operator: 12, FilterValueArray: q }];
 
-    const body = {
-      Type: 115, // Item All
-      NumberOfRecords: 50,
-      PageNumber: 1,
-      Sortation: { PropertyName: 'Name', Direction: 1 }, // Asc
-      Filters: [
-        like('Name'),
-        like('Description'),
-        like('ManufacturerPartNo'),
-        like('UPC'),
-      ]
-    };
+    const [byDoc, byCust] = await Promise.all([
+      otList({ Type: 7, Filters: filtersByDoc, NumberOfRecords: 25 }),
+      otList({ Type: 7, Filters: filtersByCust, NumberOfRecords: 25 }).catch(() => ({ result: [] })),
+    ]);
 
-    const r = await fetch(`${BASE}/list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ApiKey: KEY },
-      body: JSON.stringify(body)
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(JSON.stringify(data));
+    const seen = new Set();
+    const merged = [...(byDoc.result || []), ...(byCust.result || [])].filter(i => (seen.has(i.Id) ? false : (seen.add(i.Id), true)));
 
-    const results = (data?.List || data || []).map(row => ({
-      id: row.Id ?? row.id,
-      name: row.Name ?? row.name,
-      description: row.Description ?? row.description,
-      upc: row.UPC ?? row.upc,
-      mfgPart: row.ManufacturerPartNo ?? row.manufacturerPartNo,
-      price: row.Price ?? row.price,
-      uom: row.UomRef?.Name ?? row.uom
-    }));
-    res.status(200).json({ results });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Item search failed' });
+    res.json(merged.map(toSOCard));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }
