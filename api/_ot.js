@@ -1,24 +1,15 @@
-headers: {
-  'Content-Type': 'application/json',
-  'apiKey': process.env.OT_API_KEY,
-  'email': process.env.OT_EMAIL,
-  'password': process.env.OT_PASSWORD
-}
-
-
+// /api/_ot.js
 const BASE = process.env.OT_BASE_URL || 'https://services.ordertime.com/api';
 const API_KEY = process.env.OT_API_KEY;
 const EMAIL = process.env.OT_EMAIL;
-const PASSWORD = process.env.OT_PASSWORD;
-const DEVKEY = process.env.OT_DEV_KEY; // optional alternative to PASSWORD
+const PASSWORD = process.env.OT_PASSWORD;     // or use OT_DEV_KEY instead
+const DEVKEY = process.env.OT_DEV_KEY;        // optional
 
 function assertEnv() {
   if (!BASE) throw new Error('Missing OT_BASE_URL');
   if (!API_KEY) throw new Error('Missing OT_API_KEY');
   if (!EMAIL) throw new Error('Missing OT_EMAIL');
-  if (!PASSWORD && !DEVKEY) {
-    throw new Error('Provide OT_PASSWORD or OT_DEV_KEY');
-  }
+  if (!PASSWORD && !DEVKEY) throw new Error('Provide OT_PASSWORD or OT_DEV_KEY');
 }
 
 function authHeaders() {
@@ -34,36 +25,35 @@ async function post(path, body) {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body || {}),
   });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`${path} ${res.status}: ${text.slice(0,300)}`);
-  try { return JSON.parse(text); } catch { return text; }
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`${path} ${res.status}: ${txt.slice(0,300)}`);
+  try { return JSON.parse(txt); } catch { return txt; }
 }
 
-// --- API helpers ---
-
-// /list with ListInfo for Customers (RecordTypeEnum 120)
+/** Search customers via /list (Type 120) with "contains" on Name */
 export async function listCustomersByName(q, page = 1, pageSize = 25) {
   const body = {
     Type: 120, // Customer
     Filters: [{
       PropertyName: 'Name',
-      Operator: 12,             // 12 = contains (per FilterOpEnum)
+      Operator: 12,               // 12 = contains
       FilterValueArray: q || ''
     }],
     PageNumber: page,
-    NumberOfRecords: Math.min(Math.max(parseInt(pageSize,10) || 25,1),100)
+    NumberOfRecords: Math.min(Math.max(+pageSize || 25, 1), 100)
   };
   const data = await post('/list', body);
   return Array.isArray(data) ? data : (Array.isArray(data?.Items) ? data.Items : []);
 }
 
-// /customer GET by id (OrderTime supports /customer)
-export async function getCustomer(id) {
+/** Optional: get a customer by id using GET /customer?id= */
+export async function getCustomerById(id) {
+  assertEnv();
   const res = await fetch(`${BASE}/customer?id=${encodeURIComponent(id)}`, {
     method: 'GET',
     headers: authHeaders(),
   });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`/customer ${res.status}: ${text.slice(0,300)}`);
-  return JSON.parse(text);
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`/customer ${res.status}: ${txt.slice(0,300)}`);
+  return JSON.parse(txt);
 }
