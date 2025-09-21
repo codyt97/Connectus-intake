@@ -409,6 +409,7 @@
           <div class="tiny">Enter a QR ID to prefill the line. Subtabs appear for Accessory, Insurance, SIM/Pairing, and Licenses.</div>
         </section>
         <section class="full" id="itemsCard">
+          <button class="ghost" onclick="openDrawer('drawerItems')">Search Items (OrderTime)</button>
           <div class="row" style="gap:10px;margin-bottom:6px"><button onclick="addRow()">+ Add Line</button><button class="ghost" onclick="autoExample()">Load Example</button></div>
           <div class="table-wrap" style="overflow:auto;margin-top:8px">
             <table class="table" id="itemsTbl"><thead><tr>
@@ -673,6 +674,22 @@
     </div>
   </div>
 </aside>
+<!-- Items (OrderTime) -->
+<aside class="drawer" id="drawerItems" aria-label="Items Drawer">
+  <header>
+    <strong>Items — OrderTime Search</strong>
+    <button class="ghost" onclick="closeDrawer('drawerItems')">Close</button>
+  </header>
+  <div class="content">
+    <label class="tiny">Search items in OrderTime</label>
+    <div class="row">
+      <input id="itemQuery" placeholder="Name, MFG Part #, UPC, SKU" />
+      <button class="ghost" onclick="openItemSearch()">Search</button>
+    </div>
+    <div id="itemResults" class="tiny" style="margin-top:8px"></div>
+  </div>
+</aside>
+
 
 <!-- NEW Customer invite -->
 <!-- NEW Customer invite -->
@@ -1449,6 +1466,52 @@ async function openSOSearch(){
   }
 }
 
+
+// Items: search in OT and add to the Items table
+async function openItemSearch(){
+  const q = (document.getElementById('itemQuery').value || '').trim();
+  const target = document.getElementById('itemResults');
+  if (!q){ target.innerHTML = 'Enter a query first.'; return; }
+  target.innerHTML = 'Searching…';
+  try{
+    // Works with either {results:[...]} or [...]
+    const resp = await api(`/ordertime/items/search?q=${encodeURIComponent(q)}`);
+    const rows = Array.isArray(resp) ? resp : (resp?.results || []);
+    if (!Array.isArray(rows) || rows.length === 0){ target.innerHTML = 'No matches.'; return; }
+
+    target.innerHTML = rows.slice(0,50).map(r => `
+      <div class="card" style="margin:6px 0;padding:10px">
+        <div><strong>${(r.name || r.sku || r.mfgPart || 'Item')}</strong></div>
+        <div class="tiny">${r.mfgPart ? r.mfgPart : ''}${r.upc ? (' • UPC ' + r.upc) : ''}</div>
+        <div class="tiny">${r.description || ''}</div>
+        <div class="row" style="margin-top:6px">
+          <button class="ok" onclick='addItemFromSearch(${JSON.stringify({
+            name: '${'${r.name||""}'}',
+            description: '${'${r.description||""}'}',
+            mfgPart: '${'${r.mfgPart||""}'}',
+            sku: '${'${r.sku||""}'}',
+            price: '${'${r.price||""}'}'
+          }).replace(/"/g,'&quot;')})'>Add</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(err){
+    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
+  }
+}
+
+// Map a found item into your Items table
+function addItemFromSearch(r){
+  addRow({
+    desc: r.description || r.name || '',
+    model: r.mfgPart || '',
+    sku: r.sku || '',
+    qty: 1,
+    msrp: r.price || '',
+    sell: r.price || ''
+  });
+  closeDrawer('drawerItems');
+}
 // Pull 1 SO and show JSON in the Clone drawer textarea
 async function loadSO(id){
   try{
