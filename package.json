@@ -1,0 +1,7 @@
+{
+  "name": "connectus-intake-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless OT proxy + static intake UI",
+  "engines": { "node": ">=18" }
+}
