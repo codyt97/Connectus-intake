@@ -1,4 +1,4 @@
-module.exports = (req, res) => {
-  res.setHeader("content-type", "application/json");
-  res.status(200).send(JSON.stringify({ ok: true }));
+module.exports = (_req, res) => {
+  res.status(200).json({ ok: true });
 };
+
