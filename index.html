@@ -1633,7 +1633,7 @@ async function openSOSearch(){
   if(!q){ target.innerHTML = 'Enter a query first.'; return; }
   target.innerHTML = 'Searching…';
   try{
-    // hit your proxy: GET /api/ordertime/sales-orders/search?q=...
+    // hit your proxy: GET /api/ordertime/salesorders/search?q=...
     const results = await api(`/ordertime/sales-orders/search?q=${encodeURIComponent(q)}`);
     if(!Array.isArray(results) || results.length === 0){
       target.innerHTML = 'No matches.'; return;
