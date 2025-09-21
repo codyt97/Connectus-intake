@@ -1,4 +1,4 @@
-import { searchPartItemsByText } from "../../ot/_lib/ot.js";
+import { searchPartItemsByText } from "../_lib/ot.js";
 
 export default async function handler(req, res) {
   try {
