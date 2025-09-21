@@ -1485,13 +1485,13 @@ async function openItemSearch(){
         <div class="tiny">${r.mfgPart ? r.mfgPart : ''}${r.upc ? (' • UPC ' + r.upc) : ''}</div>
         <div class="tiny">${r.description || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok" onclick='addItemFromSearch(${JSON.stringify({
-            name: '${'${r.name||""}'}',
-            description: '${'${r.description||""}'}',
-            mfgPart: '${'${r.mfgPart||""}'}',
-            sku: '${'${r.sku||""}'}',
-            price: '${'${r.price||""}'}'
-          }).replace(/"/g,'&quot;')})'>Add</button>
+          <button class="ok" data-item='${JSON.stringify({
+            name: r.name || r.sku || r.mfgPart || "Item",
+            description: r.description || "",
+            mfgPart: r.mfgPart || "",
+            sku: r.sku || "",
+             price: Number(r.price || 0)
+            }).replace(/'/g,"&#39;")}'>Add</button>
         </div>
       </div>
     `).join('');
