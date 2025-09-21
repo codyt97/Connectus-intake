@@ -1,8 +1,0 @@
-{
-  "name": "connectus-intake",
-  "private": true,
-  "version": "0.1.0",
-  "description": "ConnectUS Intake - Vercel serverless + static UI",
-  "type": "module",
-  "engines": { "node": "20.x" }
-}
