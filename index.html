@@ -1427,14 +1427,15 @@ function applyCustomerFromApi(r){
 async function openSOSearch(){
   const q = (document.getElementById('cloneQuery').value || '').trim();
   const target = document.getElementById('cloneResults');
-  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
+  if (!q) { target.innerHTML = 'Enter a query first.'; return; }
   target.innerHTML = 'Searching…';
-  try{
-    const rows = await api(/ot/sales-orders/search?q=${encodeURIComponent(q)});
-    if(!Array.isArray(results) || results.length === 0){
+  try {
+    // Calls /api/ordertime/sales-orders/search?q=...
+    const results = await api(`/ordertime/sales-orders/search?q=${encodeURIComponent(q)}`);
+    if (!Array.isArray(results) || results.length === 0) {
       target.innerHTML = 'No matches.'; return;
     }
-    target.innerHTML = results.slice(0,25).map(so => `
+    target.innerHTML = results.slice(0, 25).map(so => `
       <div class="card" style="margin:6px 0;padding:10px">
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
@@ -1444,10 +1445,11 @@ async function openSOSearch(){
         </div>
       </div>
     `).join('');
-  }catch(err){
+  } catch (err) {
     target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
   }
 }
+
 
 // Pull 1 SO and show JSON in the Clone drawer textarea
 async function loadSO(id){
@@ -1592,16 +1594,23 @@ async function openSOSearch(){
   }
 }
 
+// Pull 1 SO and show JSON in the Clone drawer textarea
 async function loadSO(id){
-  try{
-    // GET /api/ordertime/sales-orders/:id
+  try {
+    // Calls /api/ordertime/sales-orders/:id
     const so = await api(`/ordertime/sales-orders/${encodeURIComponent(id)}`);
-    // show JSON in the drawer textarea so the user can review/edit
     document.getElementById('clonePaste').value = JSON.stringify(so, null, 2);
-  }catch(err){
+  } catch (err) {
     alert(`Load SO failed: ${err.message}`);
   }
 }
+
+// Pull + apply (reuses your mapper)
+async function applySO(id){
+  await loadSO(id);
+  applyClonedOrder();
+}
+
 
 async function applySO(id){
   await loadSO(id);     // puts the JSON into #clonePaste
