@@ -1,3 +1,11 @@
+headers: {
+  'Content-Type': 'application/json',
+  'apiKey': process.env.OT_API_KEY,
+  'email': process.env.OT_EMAIL,
+  'password': process.env.OT_PASSWORD
+}
+
+
 const BASE = process.env.OT_BASE_URL || 'https://services.ordertime.com/api';
 const API_KEY = process.env.OT_API_KEY;
 const EMAIL = process.env.OT_EMAIL;
