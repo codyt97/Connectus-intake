@@ -1,4 +1,3 @@
-// /api/ordertime/customers/search.js
 import { listCustomersByName } from '../../_ot';
 
 export default async function handler(req, res) {
@@ -7,23 +6,22 @@ export default async function handler(req, res) {
     const { q = '', page = '1', take = '25' } = req.query;
     if (!q.trim()) return res.status(400).json({ error: 'Missing query ?q=' });
 
-    const rows = await listCustomersByName(q.trim(), +page || 1, +take || 25);
+    const rows = await listCustomersByName(q.trim(), Number(page)||1, Number(take)||25);
 
-    // normalize fields your UI expects
     const items = rows.map(r => ({
-      id: r.Id,
+      id: r.Id ?? r.ID ?? r.id,
       company: r.Name || r.CompanyName || r.Company || '',
       city: r.City || r.BillingCity || '',
       state: r.State || r.BillingState || '',
       zip: r.Zip || r.BillingZip || '',
       billingContact: r.BillingContact || '',
-      billingPhone: r.BillingPhone || '',
-      billingEmail: r.BillingEmail || ''
+      billingPhone:   r.BillingPhone || '',
+      billingEmail:   r.BillingEmail || ''
     }));
 
     res.status(200).json(items);
   } catch (err) {
-    console.error('customers/search', err);
+    console.error('customers/search error:', err);
     res.status(500).json({ error: String(err.message || err) });
   }
 }
