@@ -186,18 +186,6 @@
 
 .actions{ display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 12px; }
 @media (min-width:900px){ .actions{ justify-content:flex-end } }
-
-.drawer{
-  position: fixed; top: 0; right: 0; height: 100vh; width: min(520px, 94vw);
-  background:#fff; box-shadow: -12px 0 24px rgba(0,0,0,.08);
-  transform: translateX(100%); transition: transform .22s ease;
-  display:flex; flex-direction:column; z-index: 1000;
-}
-.drawer.active{ transform: translateX(0); }
-.drawer-head{ display:flex; justify-content:space-between; align-items:center;
-  padding:12px 14px; border-bottom:1px solid var(--line,#e6efe9); font-weight:600; }
-.drawer-body{ padding:12px 14px; overflow:auto; }
-
 </style>
 </head>
 <body>
@@ -422,12 +410,6 @@
         </section>
         <section class="full" id="itemsCard">
           <div class="row" style="gap:10px;margin-bottom:6px"><button onclick="addRow()">+ Add Line</button><button class="ghost" onclick="autoExample()">Load Example</button></div>
-          <!-- Quick Item Search (OrderTime) -->
-          <div class="row" style="gap:8px;margin-top:8px">
-           <input id="itemQuery" placeholder="Search items by SKU / description / model…" />
-           <button class="ghost" onclick="openItemSearch()">Search Items</button>
-          </div>
-          <div id="itemResults" class="tiny" style="margin-top:6px"></div>
           <div class="table-wrap" style="overflow:auto;margin-top:8px">
             <table class="table" id="itemsTbl"><thead><tr>
               <th>Description (Mfg / Model / Size / Color)</th>
@@ -770,9 +752,6 @@ function openGmailWithCSV() {
 
   openGmailCompose({ to: toRaw, subject: subjRaw, body });
 }
-
-function openDrawer(id){ const el=document.getElementById(id); if(el) el.classList.add('active'); }
-function closeDrawer(id){ const el=document.getElementById(id); if(el) el.classList.remove('active'); }
 
 function openGmailNoCSV() {
   const toRaw     = document.getElementById('emailTo')?.value || 'service@connectuscorp.com';
@@ -1223,54 +1202,47 @@ function onWizardStepRep(repName){
   resetWizardBelow(2);
 }
 
-function onWizardStep1(val){
-  // val is 'new' or 'existing'
+function onWizardStep1(val){ // Customer Type (Step 2)
+  // Sync to existing flags + open drawers
+  document.getElementById('flagNewCustomer').checked = false;
+  document.getElementById('flagCurrentCustomer').checked = false;
+  document.getElementById('flag3PL').checked = false;
+  document.getElementById('flagWCP').checked = false;
+
   const cloneRow = document.getElementById('wizCloneRow');
-  if (cloneRow) cloneRow.style.display = (val === 'existing') ? '' : 'none';
-
-  // Optional: auto-select sensible defaults
-  if (val === 'new') {
-    // default to Quote for brand new customers
-    const q = document.querySelector('input[name="wizDocType"][value="QUOTE"]');
-    if (q) q.checked = true;
-  }
-  if (val === 'existing') {
-    // reveal Step-3 and default to Sales Order (you can change this)
-    const so = document.querySelector('input[name="wizDocType"][value="SO"]');
-    if (so) so.checked = true;
-  }
-
-  // Ensure Step-3 is visible/next steps reset
-  const step3 = document.getElementById('wizStep3');
-  if (step3) step3.style.display = '';
-  if (typeof resetWizardBelow === 'function') resetWizardBelow(3);
-}
-document.querySelectorAll('input[name="wizCustomerType"]').forEach(i=>{
-  i.addEventListener('change', e => onWizardStep1(e.target.value));
-});
-document.querySelectorAll('input[name="wizDocType"]').forEach(i=>{
-  i.addEventListener('change', e => onWizardStep2(e.target.value));
-});
-
-
-function onWizardStep2(val){
-  // Sync radios (defensive)
-  const r = document.querySelector(`input[name="wizDocType"][value="${val}"]`);
-  if (r) r.checked = true;
-
-  if (val === 'CLONE') {
-    try { sessionStorage.setItem('CUC_CLONE_MODE', '1'); } catch(e){}
-    openDrawer('drawerClone');    // <-- the critical line
-  } else {
-    try { sessionStorage.removeItem('CUC_CLONE_MODE'); } catch(e){}
-    closeDrawer('drawerClone');
+  if(val === 'new'){
+    document.getElementById('flagNewCustomer').checked = true;
+    refreshSSPTemplate();
+    openDrawer('drawerNew');
+    if(cloneRow) cloneRow.style.display = 'none';
+  }else if(val === 'existing'){
+    document.getElementById('flagCurrentCustomer').checked = true;
+    openDrawer('drawerWCP');
+    if(cloneRow) cloneRow.style.display = '';
+  }else{
+    if(cloneRow) cloneRow.style.display = 'none';
   }
 
-  const step4 = document.getElementById('wizStep4');
-  if (step4) step4.style.display = ''; // reveal next step in your wizard
-  if (typeof resetWizardBelow === 'function') resetWizardBelow(4);
+  document.getElementById('wizStep2').style.display = ''; // Document Type (now Step 3)
+  resetWizardBelow(3);
 }
 
+function onWizardStep2(val){ // Document Type (Step 3)
+  // Mirror QUOTE/SALES ORDER/CLONE to underlying doc type radios
+  const radios = document.querySelectorAll('input[name="doctype"]');
+  let matched = false;
+  radios.forEach(r => { r.checked = (r.value === val); if(r.checked) matched = true; });
+
+  if(val === 'CLONE'){
+    sessionStorage.setItem('CUC_CLONE_MODE','1');
+    openDrawer('drawerClone'); // 👈 open the new drawer
+  }else{
+    sessionStorage.removeItem('CUC_CLONE_MODE');
+  }
+
+  document.getElementById('wizStep3').style.display = ''; // Scope (now Step 4)
+  resetWizardBelow(4);
+}
 
 
 function onWizardComplete(scope){ // Scope (Step 4)
@@ -1365,40 +1337,6 @@ async function openOTSearch(){
     target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
   }
 }
-// ===== SO helper (Clone Existing Order) =====
-async function openSOSearch(){
-  const q = (document.getElementById('cloneQuery').value || '').trim();
-  const target = document.getElementById('cloneResults');
-  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
-  target.innerHTML = 'Searching…';
-  try{
-    const results = await api(`/ordertime/sales-orders/search?q=${encodeURIComponent(q)}`);
-    if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
-    target.innerHTML = results.slice(0,25).map(r => `
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${r.number||'—'}</strong> — ${r.customer||''}</div>
-        <div class="tiny">${r.status||''} • ${r.date||''} ${r.total!=null?('• Total: '+r.total):''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ghost" onclick='prefillCloneFromSo(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Use</button>
-        </div>
-      </div>
-    `).join('');
-  }catch(err){
-    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
-  }
-}
-
-// Called when user clicks “Use” on a result.
-// Keep this lightweight; your drawer already supports pasting full JSON.
-function prefillCloneFromSo(so){
-  document.getElementById('cloneResults').innerHTML =
-    `<div class="tiny">Selected <b>${so.number||'SO'}</b>. Export the order JSON from OrderTime and paste it below, then click “Apply to Form”.</div>`;
-  // (Optional) You can also stash basic context if you like:
-  try { sessionStorage.setItem('CUC_LAST_SO', JSON.stringify(so)); } catch(e){}
-}
-
-
-
 
 
 // Map a customer result into your existing form fields
@@ -1853,45 +1791,6 @@ document.getElementById('btnLoadQR').addEventListener('click', ()=>{
   if(!data){ alert('No mapping found for that ID.'); return; }
   addRow(data);
 });
-
-// ===== Item lookup (push to lines) =====
-async function openItemSearch(){
-  const q = (document.getElementById('itemQuery').value || '').trim();
-  const target = document.getElementById('itemResults');
-  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
-  target.innerHTML = 'Searching…';
-  try{
-    const results = await api(`/ordertime/items/search?q=${encodeURIComponent(q)}`);
-    if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
-    target.innerHTML = results.slice(0,50).map(it => `
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${it.sku || '—'}</strong> — ${it.desc||''}</div>
-        <div class="tiny">${it.manufacturer||''} ${it.model||''} ${it.uom?('• '+it.uom):''} ${it.active===false?'• Inactive':''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ghost" onclick='addItemRowFromLookup(${JSON.stringify(it).replace(/'/g,"&#39;")})'>Add to lines</button>
-        </div>
-      </div>
-    `).join('');
-  }catch(err){
-    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
-  }
-}
-
-function addItemRowFromLookup(it){
-  // Minimal mapping into your existing lines schema
-  addRow({
-    desc: it.desc || '',
-    model: it.model || '',
-    sku: it.sku || '',
-    qty: 1
-  });
-  // Optional UX: flash the Items tab
-  try{
-    const t = document.querySelector('button.tab[data-tab="items"]');
-    if(t){ t.classList.add('active'); setTimeout(()=>t.classList.remove('active'), 600); }
-  }catch(e){}
-}
-
 
 /* ===== Subtabs ===== */
 function showSubtabs(){ document.getElementById('subtabsArea').style.display=''; document.getElementById('subtabPanels').style.display=''; }
