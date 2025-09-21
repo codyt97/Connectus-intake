@@ -114,4 +114,29 @@ export async function getCustomerById(id) {
       zip:     x.BillingZip      || '',
     },
     shipping: {
-      company:   x.Shi
+      company:   x.ShipToCompany || x.Company || '',
+      contact:   x.ShipToContact || '',
+      phone:     x.ShipToPhone   || '',
+      email:     x.ShipToEmail   || '',
+      street:    x.ShipToAddress1 || '',
+      suite:     x.ShipToAddress2 || '',
+      city:      x.ShipToCity     || '',
+      state:     x.ShipToState    || '',
+      zip:       x.ShipToZip      || '',
+      residence: !!x.ShipToIsResidential,
+    },
+    payment: {
+      method:    x.DefaultPaymentMethod || '',
+      terms:     x.PaymentTerms         || '',
+      taxExempt: !!x.IsTaxExempt,
+      agreement: !!x.HasPurchaseAgreement,
+    },
+    shippingOptions: {
+      pay:      x.DefaultShipPaymentMethod || '',
+      speed:    x.DefaultShipSpeed         || '',
+      shortShip: x.ShortShipPolicy || '',
+    },
+    carrierRep: { name: x.CarrierRepName || '', email: x.CarrierRepEmail || '' },
+    rep:        { primary: x.PrimaryRepName || '', secondary: x.SecondaryRepName || '' },
+  };
+}
