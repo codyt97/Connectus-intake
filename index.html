@@ -1346,7 +1346,7 @@ async function openOTSearch(){
         <div><strong>${r.company||'—'}</strong></div>
         <div class="tiny">${r.city||''} ${r.state||''} ${r.zip||''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" onclick='applyCustomerFromApi(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Apply</button>
+          <button class="ghost" data-so-id="${r.id || r.Id}">Apply</button>
         </div>
       </div>
     `).join('');
@@ -2512,5 +2512,53 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
   refreshCSVPreview();
 })();
 </script>
+<script>
+  // one handler for all "Apply" clicks in the SO results list
+  (function () {
+    const soResultsEl = document.getElementById('soResults');
+    if (!soResultsEl) return;
+    soResultsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-so-id]');
+      if (!btn) return;
+      applySalesOrderById(btn.dataset.soId);
+    });
+  }());
+</script>
+<script>
+  // tiny loading helper
+  function busy(el, on) {
+    if (!el) return;
+    el.setAttribute('aria-busy', on ? 'true' : 'false');
+    if (el.disabled !== undefined) el.disabled = !!on;
+    (el.querySelectorAll ? el.querySelectorAll('button,input') : []).forEach(x => x.disabled = !!on);
+  }
+
+  // one handler for all "Add" clicks in the Item results list
+  (function () {
+    const itemResultsEl = document.getElementById('itemResults');
+    if (!itemResultsEl) return;
+    itemResultsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-item]');
+      if (!btn) return;
+      const payload = JSON.parse(btn.dataset.item);
+      addItemFromSearch(payload);
+      closeDrawer('drawerItems');
+    });
+  }());
+
+  // map item search row -> your table
+  function addItemFromSearch(r){
+    addRow({
+      desc: r.description || r.name || '',
+      model: r.mfgPart || '',
+      sku: r.sku || '',
+      qty: 1,
+      msrp: r.price || '',
+      sell: r.price || ''
+    });
+  }
+</script>
+</body>
+
 </body>
 </html>
