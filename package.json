@@ -1,7 +1,7 @@
 {
-  "name": "connectus-intake-proxy",
-  "version": "1.0.0",
+  "name": "connectus-intake",
   "private": true,
-  "description": "Serverless OT proxy + static intake UI",
+  "version": "0.1.0",
+  "description": "ConnectUS Intake - Vercel serverless + static UI",
   "engines": { "node": "20.x" }
 }
