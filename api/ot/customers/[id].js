@@ -1,4 +1,4 @@
-import { getCustomerById } from "../../ot/_lib/ot.js";
+import { getCustomerById } from "../_lib/ot.js";
 
 export default async function handler(req, res) {
   const { id } = req.query;
