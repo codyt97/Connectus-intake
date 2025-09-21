@@ -1322,7 +1322,7 @@ async function openOTSearch(){
   if(!q){ target.innerHTML='Enter a query first.'; return; }
   target.innerHTML='Searching…';
   try{
-    const results = await api(`/ordertime/customers/search?q=${encodeURIComponent(q)}`);
+    const rows = await api(/ot/customers/search?q=${encodeURIComponent(q)});
     if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
     target.innerHTML = results.slice(0,25).map(r=>`
       <div class="card" style="margin:6px 0;padding:10px">
@@ -1430,7 +1430,7 @@ async function openSOSearch(){
   if(!q){ target.innerHTML = 'Enter a query first.'; return; }
   target.innerHTML = 'Searching…';
   try{
-    const results = await api(`/ordertime/sales-orders/search?q=${encodeURIComponent(q)}`);
+    const rows = await api(/ot/sales-orders/search?q=${encodeURIComponent(q)});
     if(!Array.isArray(results) || results.length === 0){
       target.innerHTML = 'No matches.'; return;
     }
@@ -1452,7 +1452,7 @@ async function openSOSearch(){
 // Pull 1 SO and show JSON in the Clone drawer textarea
 async function loadSO(id){
   try{
-    const so = await api(`/ordertime/sales-orders/${encodeURIComponent(id)}`);
+    const data = await api(/ot/sales-orders/${id});
     document.getElementById('clonePaste').value = JSON.stringify(so, null, 2);
   }catch(err){
     alert(`Load SO failed: ${err.message}`);
