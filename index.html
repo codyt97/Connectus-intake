@@ -410,6 +410,12 @@
         </section>
         <section class="full" id="itemsCard">
           <div class="row" style="gap:10px;margin-bottom:6px"><button onclick="addRow()">+ Add Line</button><button class="ghost" onclick="autoExample()">Load Example</button></div>
+          <!-- Quick Item Search (OrderTime) -->
+          <div class="row" style="gap:8px;margin-top:8px">
+           <input id="itemQuery" placeholder="Search items by SKU / description / model…" />
+           <button class="ghost" onclick="openItemSearch()">Search Items</button>
+          </div>
+          <div id="itemResults" class="tiny" style="margin-top:6px"></div>
           <div class="table-wrap" style="overflow:auto;margin-top:8px">
             <table class="table" id="itemsTbl"><thead><tr>
               <th>Description (Mfg / Model / Size / Color)</th>
@@ -1337,6 +1343,40 @@ async function openOTSearch(){
     target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
   }
 }
+// ===== SO helper (Clone Existing Order) =====
+async function openSOSearch(){
+  const q = (document.getElementById('cloneQuery').value || '').trim();
+  const target = document.getElementById('cloneResults');
+  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
+  target.innerHTML = 'Searching…';
+  try{
+    const results = await api(`/ordertime/sales-orders/search?q=${encodeURIComponent(q)}`);
+    if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
+    target.innerHTML = results.slice(0,25).map(r => `
+      <div class="card" style="margin:6px 0;padding:10px">
+        <div><strong>${r.number||'—'}</strong> — ${r.customer||''}</div>
+        <div class="tiny">${r.status||''} • ${r.date||''} ${r.total!=null?('• Total: '+r.total):''}</div>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost" onclick='prefillCloneFromSo(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Use</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(err){
+    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
+  }
+}
+
+// Called when user clicks “Use” on a result.
+// Keep this lightweight; your drawer already supports pasting full JSON.
+function prefillCloneFromSo(so){
+  document.getElementById('cloneResults').innerHTML =
+    `<div class="tiny">Selected <b>${so.number||'SO'}</b>. Export the order JSON from OrderTime and paste it below, then click “Apply to Form”.</div>`;
+  // (Optional) You can also stash basic context if you like:
+  try { sessionStorage.setItem('CUC_LAST_SO', JSON.stringify(so)); } catch(e){}
+}
+
+
+
 
 
 // Map a customer result into your existing form fields
@@ -1791,6 +1831,45 @@ document.getElementById('btnLoadQR').addEventListener('click', ()=>{
   if(!data){ alert('No mapping found for that ID.'); return; }
   addRow(data);
 });
+
+// ===== Item lookup (push to lines) =====
+async function openItemSearch(){
+  const q = (document.getElementById('itemQuery').value || '').trim();
+  const target = document.getElementById('itemResults');
+  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
+  target.innerHTML = 'Searching…';
+  try{
+    const results = await api(`/ordertime/items/search?q=${encodeURIComponent(q)}`);
+    if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
+    target.innerHTML = results.slice(0,50).map(it => `
+      <div class="card" style="margin:6px 0;padding:10px">
+        <div><strong>${it.sku || '—'}</strong> — ${it.desc||''}</div>
+        <div class="tiny">${it.manufacturer||''} ${it.model||''} ${it.uom?('• '+it.uom):''} ${it.active===false?'• Inactive':''}</div>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost" onclick='addItemRowFromLookup(${JSON.stringify(it).replace(/'/g,"&#39;")})'>Add to lines</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(err){
+    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
+  }
+}
+
+function addItemRowFromLookup(it){
+  // Minimal mapping into your existing lines schema
+  addRow({
+    desc: it.desc || '',
+    model: it.model || '',
+    sku: it.sku || '',
+    qty: 1
+  });
+  // Optional UX: flash the Items tab
+  try{
+    const t = document.querySelector('button.tab[data-tab="items"]');
+    if(t){ t.classList.add('active'); setTimeout(()=>t.classList.remove('active'), 600); }
+  }catch(e){}
+}
+
 
 /* ===== Subtabs ===== */
 function showSubtabs(){ document.getElementById('subtabsArea').style.display=''; document.getElementById('subtabPanels').style.display=''; }
