@@ -1,35 +1,29 @@
 export default async function handler(req, res) {
-  const BASE = process.env.OT_BASE_URL;         // e.g. https://services.ordertime.com/api
+  const BASE = process.env.OT_BASE_URL;
   const KEY  = process.env.OT_API_KEY;
 
   try {
     const q = String(req.query.q || '').trim();
     if (!q) return res.status(200).json({ results: [] });
 
-    // Helpers for filter rows
     const like = (prop) => ({
       PropertyName: prop,
-      FieldType: 1,          // String
-      Operator: 12,          // Like
+      FieldType: 1,      // String
+      Operator: 12,      // Like
       FilterValueArray: `%${q}%`
     });
 
-    const filters = /^\d+$/.test(q)
-      // Numeric -> exact DocNo match
-      ? [{ PropertyName: 'DocNo', FieldType: 3, Operator: 1, FilterValueArray: String(parseInt(q, 10)) }]
-      // Text -> OR across useful text fields
-      : [
-          like('CustomerPO'),
-          like('Memo'),
-          like('CustomerRef.Name') // works against the EntityRef name
-        ];
-
     const body = {
-      Type: 7,                    // Sales Order
+      Type: 115, // Item All
       NumberOfRecords: 50,
       PageNumber: 1,
-      Sortation: { PropertyName: 'DocNo', Direction: 2 }, // Desc
-      Filters: filters
+      Sortation: { PropertyName: 'Name', Direction: 1 }, // Asc
+      Filters: [
+        like('Name'),
+        like('Description'),
+        like('ManufacturerPartNo'),
+        like('UPC'),
+      ]
     };
 
     const r = await fetch(`${BASE}/list`, {
@@ -40,17 +34,18 @@ export default async function handler(req, res) {
     const data = await r.json();
     if (!r.ok) throw new Error(JSON.stringify(data));
 
-    // normalize a thin list row
     const results = (data?.List || data || []).map(row => ({
-      docNo: row.DocNo ?? row.docNo,
-      date: row.Date ?? row.date,
-      customer: row.CustomerRef?.Name ?? row.CustomerName ?? '',
-      status: row.StatusRef?.Name ?? '',
+      id: row.Id ?? row.id,
+      name: row.Name ?? row.name,
+      description: row.Description ?? row.description,
+      upc: row.UPC ?? row.upc,
+      mfgPart: row.ManufacturerPartNo ?? row.manufacturerPartNo,
+      price: row.Price ?? row.price,
+      uom: row.UomRef?.Name ?? row.uom
     }));
-
     res.status(200).json({ results });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Sales order search failed' });
+    res.status(500).json({ error: 'Item search failed' });
   }
 }
