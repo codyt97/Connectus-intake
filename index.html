@@ -601,7 +601,6 @@
     <div id="wcpResults" class="tiny" style="margin-top:8px"></div>
     <div class="divider"></div>
     <div class="tiny">After selecting the customer in OrderTime, paste the exported details below (JSON or key:value). Supports billing, shipping, payment, shipping options.</div>
-    <div id="wcpResults" class="tiny" style="margin-top:8px"></div>
     <textarea id="wcpPaste" rows="10" style="width:100%;margin-top:8px" placeholder='{
   "company":"Acme Corp",
   "billing":{"contact":"John","phone":"555-1111","email":"billing@acme.com","street":"1 Main","suite":"Ste 100","city":"Phila","state":"PA","zip":"19104"},
@@ -1457,7 +1456,7 @@ async function openSOSearch(){
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
           <button class="ghost" onclick="loadSO('${so.id || so.number}')">Preview</button>
-          <button class="ok" onclick="applySO('${so.id || so.number}')">Apply</button>
+          <button class="ok" data-so-id="${so.id || so.number}">Apply</button>
         </div>
       </div>
     `).join('');
@@ -2513,16 +2512,17 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
 })();
 </script>
 <script>
-  // one handler for all "Apply" clicks in the SO results list
-  (function () {
-    const soResultsEl = document.getElementById('soResults');
-    if (!soResultsEl) return;
-    soResultsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-so-id]');
-      if (!btn) return;
-      applySalesOrderById(btn.dataset.soId);
-    });
-  }());
+// one handler for all "Apply" clicks in the SO results list
+(function () {
+  const el = document.getElementById('cloneResults');
+  if (!el) return;
+  el.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-so-id]');
+    if (!btn) return;
+    applySO(btn.dataset.soId); // you already have load+apply combo
+  });
+}());
+
 </script>
 <script>
   // tiny loading helper
@@ -2534,17 +2534,17 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
   }
 
   // one handler for all "Add" clicks in the Item results list
-  (function () {
-    const itemResultsEl = document.getElementById('itemResults');
-    if (!itemResultsEl) return;
-    itemResultsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-item]');
-      if (!btn) return;
-      const payload = JSON.parse(btn.dataset.item);
-      addItemFromSearch(payload);
-      closeDrawer('drawerItems');
-    });
-  }());
+(function () {
+  const el = document.getElementById('itemResults');
+  if (!el) return;
+  el.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-item]');
+    if (!btn) return;
+    const payload = JSON.parse(btn.dataset.item);
+    addItemFromSearch(payload);  // addItemFromSearch already closes the drawer
+  });
+}());
+
 
   // map item search row -> your table
   function addItemFromSearch(r){
