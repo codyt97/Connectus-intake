@@ -186,6 +186,18 @@
 
 .actions{ display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 12px; }
 @media (min-width:900px){ .actions{ justify-content:flex-end } }
+
+.drawer{
+  position: fixed; top: 0; right: 0; height: 100vh; width: min(520px, 94vw);
+  background:#fff; box-shadow: -12px 0 24px rgba(0,0,0,.08);
+  transform: translateX(100%); transition: transform .22s ease;
+  display:flex; flex-direction:column; z-index: 1000;
+}
+.drawer.active{ transform: translateX(0); }
+.drawer-head{ display:flex; justify-content:space-between; align-items:center;
+  padding:12px 14px; border-bottom:1px solid var(--line,#e6efe9); font-weight:600; }
+.drawer-body{ padding:12px 14px; overflow:auto; }
+
 </style>
 </head>
 <body>
@@ -759,6 +771,9 @@ function openGmailWithCSV() {
   openGmailCompose({ to: toRaw, subject: subjRaw, body });
 }
 
+function openDrawer(id){ const el=document.getElementById(id); if(el) el.classList.add('active'); }
+function closeDrawer(id){ const el=document.getElementById(id); if(el) el.classList.remove('active'); }
+
 function openGmailNoCSV() {
   const toRaw     = document.getElementById('emailTo')?.value || 'service@connectuscorp.com';
   const subjRaw   = document.getElementById('emailSubject')?.value || 'New Intake — Summary';
@@ -1208,47 +1223,54 @@ function onWizardStepRep(repName){
   resetWizardBelow(2);
 }
 
-function onWizardStep1(val){ // Customer Type (Step 2)
-  // Sync to existing flags + open drawers
-  document.getElementById('flagNewCustomer').checked = false;
-  document.getElementById('flagCurrentCustomer').checked = false;
-  document.getElementById('flag3PL').checked = false;
-  document.getElementById('flagWCP').checked = false;
-
+function onWizardStep1(val){
+  // val is 'new' or 'existing'
   const cloneRow = document.getElementById('wizCloneRow');
-  if(val === 'new'){
-    document.getElementById('flagNewCustomer').checked = true;
-    refreshSSPTemplate();
-    openDrawer('drawerNew');
-    if(cloneRow) cloneRow.style.display = 'none';
-  }else if(val === 'existing'){
-    document.getElementById('flagCurrentCustomer').checked = true;
-    openDrawer('drawerWCP');
-    if(cloneRow) cloneRow.style.display = '';
-  }else{
-    if(cloneRow) cloneRow.style.display = 'none';
+  if (cloneRow) cloneRow.style.display = (val === 'existing') ? '' : 'none';
+
+  // Optional: auto-select sensible defaults
+  if (val === 'new') {
+    // default to Quote for brand new customers
+    const q = document.querySelector('input[name="wizDocType"][value="QUOTE"]');
+    if (q) q.checked = true;
+  }
+  if (val === 'existing') {
+    // reveal Step-3 and default to Sales Order (you can change this)
+    const so = document.querySelector('input[name="wizDocType"][value="SO"]');
+    if (so) so.checked = true;
   }
 
-  document.getElementById('wizStep2').style.display = ''; // Document Type (now Step 3)
-  resetWizardBelow(3);
+  // Ensure Step-3 is visible/next steps reset
+  const step3 = document.getElementById('wizStep3');
+  if (step3) step3.style.display = '';
+  if (typeof resetWizardBelow === 'function') resetWizardBelow(3);
 }
+document.querySelectorAll('input[name="wizCustomerType"]').forEach(i=>{
+  i.addEventListener('change', e => onWizardStep1(e.target.value));
+});
+document.querySelectorAll('input[name="wizDocType"]').forEach(i=>{
+  i.addEventListener('change', e => onWizardStep2(e.target.value));
+});
 
-function onWizardStep2(val){ // Document Type (Step 3)
-  // Mirror QUOTE/SALES ORDER/CLONE to underlying doc type radios
-  const radios = document.querySelectorAll('input[name="doctype"]');
-  let matched = false;
-  radios.forEach(r => { r.checked = (r.value === val); if(r.checked) matched = true; });
 
-  if(val === 'CLONE'){
-    sessionStorage.setItem('CUC_CLONE_MODE','1');
-    openDrawer('drawerClone'); // 👈 open the new drawer
-  }else{
-    sessionStorage.removeItem('CUC_CLONE_MODE');
+function onWizardStep2(val){
+  // Sync radios (defensive)
+  const r = document.querySelector(`input[name="wizDocType"][value="${val}"]`);
+  if (r) r.checked = true;
+
+  if (val === 'CLONE') {
+    try { sessionStorage.setItem('CUC_CLONE_MODE', '1'); } catch(e){}
+    openDrawer('drawerClone');    // <-- the critical line
+  } else {
+    try { sessionStorage.removeItem('CUC_CLONE_MODE'); } catch(e){}
+    closeDrawer('drawerClone');
   }
 
-  document.getElementById('wizStep3').style.display = ''; // Scope (now Step 4)
-  resetWizardBelow(4);
+  const step4 = document.getElementById('wizStep4');
+  if (step4) step4.style.display = ''; // reveal next step in your wizard
+  if (typeof resetWizardBelow === 'function') resetWizardBelow(4);
 }
+
 
 
 function onWizardComplete(scope){ // Scope (Step 4)
