@@ -1,0 +1,16 @@
+import { searchCustomersByName } from "../../ot/_lib/ot.js";
+
+export default async function handler(req, res) {
+  try {
+    const q = String(req.query.q || "").trim();
+    const take = Math.min(Math.max(parseInt(req.query.take || "25", 10), 1), 200);
+    const skip = Math.max(parseInt(req.query.skip || "0", 10), 0);
+
+    if (!q || q.length < 2) return res.status(200).json([]);
+
+    const rows = await searchCustomersByName(q, take, skip);
+    return res.status(200).json(rows);
+  } catch (e) {
+    return res.status(502).json({ error: String(e.message || e) });
+  }
+}
