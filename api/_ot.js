@@ -40,6 +40,10 @@ function normalizeListResult(data) {
   return [];
 }
 
+export async function otPost(path, body) {
+  return post(path, body);
+}
+
 /* ---------- Public helpers ---------- */
 
 // Multi-strategy list search for Customers
@@ -96,47 +100,59 @@ export async function getCustomerById(id) {
     headers: authHeaders(),
   });
   const txt = await res.text();
-  if (DEBUG) console.log(`[OT] GET /customer?id=${id} -> ${res.status} ${txt.slice(0,220)}`);
   if (!res.ok) throw new Error(`/customer ${res.status}: ${txt.slice(0,300)}`);
   const x = safeJSON(txt) || {};
 
-  // Normalize to the structure your UI expects
+  // Prefer nested Bill/Ship addresses; fall back to flat Billing* fields
+  const bill = x.BillAddress || x.BillingAddress || {
+    Contact: x.BillingContact, Phone: x.BillingPhone, Email: x.BillingEmail,
+    Addr1: x.BillingAddress1 || x.BillingAddress, Addr2: x.BillingAddress2,
+    City: x.BillingCity, State: x.BillingState, Zip: x.BillingZip
+  };
+  const ship = x.ShipAddress || x.ShipToAddress || {
+    Contact: x.ShipToContact, Phone: x.ShipToPhone, Email: x.ShipToEmail,
+    Addr1: x.ShipToAddress1, Addr2: x.ShipToAddress2,
+    City: x.ShipToCity, State: x.ShipToState, Zip: x.ShipToZip,
+    IsResidential: x.ShipToIsResidential
+  };
+
   return {
     company: x.Company || x.CompanyName || x.Name || '',
     billing: {
-      contact: x.BillingContact || '',
-      phone:   x.BillingPhone   || '',
-      email:   x.BillingEmail   || '',
-      street:  x.BillingAddress1 || x.BillingAddress || '',
-      suite:   x.BillingAddress2 || '',
-      city:    x.BillingCity     || '',
-      state:   x.BillingState    || '',
-      zip:     x.BillingZip      || '',
+      contact: bill?.Contact || '',
+      phone:   bill?.Phone   || '',
+      email:   bill?.Email   || '',
+      street:  bill?.Addr1   || '',
+      suite:   bill?.Addr2   || '',
+      city:    bill?.City    || '',
+      state:   bill?.State   || '',
+      zip:     bill?.Zip     || ''
     },
     shipping: {
-      company:   x.ShipToCompany || x.Company || '',
-      contact:   x.ShipToContact || '',
-      phone:     x.ShipToPhone   || '',
-      email:     x.ShipToEmail   || '',
-      street:    x.ShipToAddress1 || '',
-      suite:     x.ShipToAddress2 || '',
-      city:      x.ShipToCity     || '',
-      state:     x.ShipToState    || '',
-      zip:       x.ShipToZip      || '',
-      residence: !!x.ShipToIsResidential,
+      company: x.ShipToCompany || x.Company || '',
+      contact: ship?.Contact || '',
+      phone:   ship?.Phone   || '',
+      email:   ship?.Email   || '',
+      street:  ship?.Addr1   || '',
+      suite:   ship?.Addr2   || '',
+      city:    ship?.City    || '',
+      state:   ship?.State   || '',
+      zip:     ship?.Zip     || '',
+      residence: !!ship?.IsResidential
     },
     payment: {
-      method:    x.DefaultPaymentMethod || '',
-      terms:     x.PaymentTerms         || '',
+      method: x.DefaultPaymentMethod || '',
+      terms:  x.PaymentTerms         || '',
       taxExempt: !!x.IsTaxExempt,
       agreement: !!x.HasPurchaseAgreement,
     },
     shippingOptions: {
-      pay:      x.DefaultShipPaymentMethod || '',
-      speed:    x.DefaultShipSpeed         || '',
+      pay:   x.DefaultShipPaymentMethod || '',
+      speed: x.DefaultShipSpeed         || '',
       shortShip: x.ShortShipPolicy || '',
     },
     carrierRep: { name: x.CarrierRepName || '', email: x.CarrierRepEmail || '' },
     rep:        { primary: x.PrimaryRepName || '', secondary: x.SecondaryRepName || '' },
   };
 }
+
