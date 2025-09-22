@@ -1105,8 +1105,9 @@ const WIZ_DONE_KEY = "CUC_WIZ_DONE_V1";
 function setWizardDone(isDone){
   sessionStorage.setItem(WIZ_DONE_KEY, isDone ? "1" : "0");
 }
-<!-- After renderRepList() in init() -->
+// After renderRepList() in init()
 populateWizardRepSelect();
+
 
 
 /* ===== Wizard: Step 1 (Sales Rep) ===== */
@@ -1345,7 +1346,9 @@ async function openOTSearch(){
         <div><strong>${r.company||'—'}</strong></div>
         <div class="tiny">${r.city||''} ${r.state||''} ${r.zip||''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" data-cust-id="${r.id || r.Id}">Apply</button>
+          <button class="ok"    data-so-id="${so.id || so.number}">Apply</button>
+          <button class="ghost" data-so-preview="${so.id || so.number}">Preview</button>
+
         </div>
       </div>
     `).join('');
@@ -1607,8 +1610,9 @@ async function openSOSearch(){
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" data-cust-id="${r.id || r.Id}">Apply</button>
-          <button class="ghost" data-so-preview="${so.id || so.Id}">Preview</button>
+          <button class="ok"    data-so-id="${so.id || so.number}">Apply</button>
+          <button class="ghost" data-so-preview="${so.id || so.number}">Preview</button>
+
         </div>
       </div>
     `).join('');
