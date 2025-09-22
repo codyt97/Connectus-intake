@@ -1380,36 +1380,16 @@ async function openOTSearch(){
 
 // Map a customer result into your existing form fields
 function applyCustomerFromApi(r){
+  // Keep only the parts your form mapper expects
   const data = {
     company: r.company,
-    billing:{
-      contact: r.billingContact,
-      phone:   r.billingPhone,
-      email:   r.billingEmail,
-      street:  r.billingStreet,
-      suite:   r.billingSuite,
-      city:    r.billingCity,
-      state:   r.billingState,
-      zip:     r.billingZip
-    },
-    shipping:{
-      company: r.shipCompany,
-      contact: r.shipContact,
-      phone:   r.shipPhone,
-      email:   r.shipEmail,
-      street:  r.shipStreet,
-      suite:   r.shipSuite,
-      city:    r.shipCity,
-      state:   r.shipState,
-      zip:     r.shipZip
-    },
-    payment:{ method:r.payMethod, terms:r.payTerms, taxExempt:r.taxExempt, agreement:r.hasAgreement },
-    shippingOptions:{ pay:r.shipPay, speed:r.shipSpeed, shortShip:r.shortShip }
+    billing: r.billing,
+    shipping: r.shipping,
+    payment: r.payment,
+    shippingOptions: r.shippingOptions
   };
-  // Reuse your existing util:
-  // Simulate paste target with a temp textarea value and call existing parser
   document.getElementById('wcpPaste').value = JSON.stringify(data, null, 2);
-  applyPastedCustomer('wcpPaste');
+  applyPastedCustomer('wcpPaste'); // your existing JSON→form function
 }
 
 function applyPastedCustomer(textareaId){
