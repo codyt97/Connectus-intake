@@ -1439,34 +1439,6 @@ function applyCustomerFromApi(r){
 }
 
 
-// Search sales orders for cloning
-async function openSOSearch(){
-  const q = (document.getElementById('cloneQuery').value || '').trim();
-  const target = document.getElementById('cloneResults');
-  if(!q){ target.innerHTML = 'Enter a query first.'; return; }
-  target.innerHTML = 'Searching…';
-  try{
-    const results = await api(`/ordertime/salesorders/search?q=${encodeURIComponent(q)}`);
-    if(!Array.isArray(results) || results.length === 0){
-      target.innerHTML = 'No matches.'; return;
-    }
-    target.innerHTML = results.slice(0,25).map(so => `
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
-        <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${so.id || so.Id}">Apply</button>
-          <button class="ghost" data-so-preview="${so.id || so.Id}">Preview</button>
-
-
-        </div>
-      </div>
-    `).join('');
-  }catch(err){
-    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
-  }
-}
-
 
 // Items: search in OT and add to the Items table
 async function openItemSearch(){
