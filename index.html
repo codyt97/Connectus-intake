@@ -2558,6 +2558,24 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
     });
   }
 </script>
+  <script>
+(function(){
+  const el = document.getElementById('wcpResults'); // container that holds customer results
+  if (!el) return;
+  el.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-cust-id]');
+    if (!btn) return;
+    try {
+      const data = await api(`/ordertime/customers/${encodeURIComponent(btn.dataset.custId)}`);
+      applyCustomerFromApi(data);      // your existing mapper → form
+      closeDrawer('drawerWCP');
+    } catch (err) {
+      alert('Load customer failed: ' + err.message);
+    }
+  });
+}());
+</script>
+
 </body>
 
 </body>
