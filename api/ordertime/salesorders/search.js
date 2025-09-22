@@ -1,3 +1,7 @@
+export default async function handler(req, res) {
+  const BASE = process.env.OT_BASE_URL;
+  const KEY  = process.env.OT_API_KEY;
+
   try {
     const q = String(req.query.q || '').trim();
     if (!q) return res.status(200).json({ results: [] });
@@ -44,3 +48,4 @@
     console.error(err);
     res.status(500).json({ error: 'Item search failed' });
   }
+}
