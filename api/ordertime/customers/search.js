@@ -1,27 +1,41 @@
-import { listCustomersByName } from '../../_ot';
+// /api/ordertime/customers/search.js
+import { otPost } from '../../_ot';
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-    const { q = '', page = '1', take = '25' } = req.query;
-    if (!q.trim()) return res.status(400).json({ error: 'Missing query ?q=' });
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.status(200).json([]);
 
-    const rows = await listCustomersByName(q.trim(), Number(page)||1, Number(take)||25);
+    const like = (prop) => ({
+      PropertyName: prop,
+      FieldType: 1,                 // String
+      Operator: 12,                 // LIKE/contains
+      FilterValueArray: [q]
+    });
 
-    const items = rows.map(r => ({
-      id: r.Id ?? r.ID ?? r.id,
-      company: r.Name || r.CompanyName || r.Company || '',
-      city: r.City || r.BillingCity || '',
-      state: r.State || r.BillingState || '',
-      zip: r.Zip || r.BillingZip || '',
-      billingContact: r.BillingContact || '',
-      billingPhone:   r.BillingPhone || '',
-      billingEmail:   r.BillingEmail || ''
-    }));
+    const [byName, byCompany] = await Promise.all([
+      otPost('/list', { Type: 120, NumberOfRecords: 25, PageNumber: 1, Filters: [like('Name')] }),
+      otPost('/list', { Type: 120, NumberOfRecords: 25, PageNumber: 1, Filters: [like('CompanyName')] }).catch(() => ([])),
+    ]);
 
-    res.status(200).json(items);
-  } catch (err) {
-    console.error('customers/search error:', err);
-    res.status(500).json({ error: String(err.message || err) });
+    const rows = [
+      ...((byName?.result || byName?.Items || byName) || []),
+      ...((byCompany?.result || byCompany?.Items || byCompany) || []),
+    ];
+
+    const seen = new Set();
+    const out = rows
+      .filter(r => (seen.has(r.Id) ? false : (seen.add(r.Id), true)))
+      .map(r => ({
+        id: r.Id ?? r.id,
+        company: r.Name || r.CompanyName || r.Company || '',
+        city: r.City || r.BillingCity || '',
+        state: r.State || r.BillingState || '',
+        zip: r.Zip || r.BillingZip || '',
+      }));
+
+    res.status(200).json(out);
+  } catch (e) {
+    res.status(500).json({ error: 'Customer search failed: ' + e.message });
   }
 }
