@@ -1455,8 +1455,9 @@ async function openSOSearch(){
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" onclick="loadSO('${so.id || so.number}')">Preview</button>
-          <button class="ok" data-so-id="${so.id || so.number}">Apply</button>
+          <button class="ok"    data-so-id="${r.id || r.Id}">Apply</button>
+          <button class="ghost" data-so-preview="${r.id || r.Id}">Preview</button>
+
         </div>
       </div>
     `).join('');
@@ -1484,13 +1485,14 @@ async function openItemSearch(){
         <div class="tiny">${r.mfgPart ? r.mfgPart : ''}${r.upc ? (' • UPC ' + r.upc) : ''}</div>
         <div class="tiny">${r.description || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok" data-item='${JSON.stringify({
-            name: r.name || r.sku || r.mfgPart || "Item",
-            description: r.description || "",
-            mfgPart: r.mfgPart || "",
-            sku: r.sku || "",
+          <button class="ghost" data-item='${JSON.stringify({
+           name: r.name || r.sku || r.mfgPart || "Item",
+             description: r.description || "",
+             mfgPart: r.mfgPart || "",
+             sku: r.sku || r.number || "",
              price: Number(r.price || 0)
-            }).replace(/'/g,"&#39;")}'>Add</button>
+             }).replace(/'/g,"&#39;")}'>Add</button>
+
         </div>
       </div>
     `).join('');
@@ -1644,8 +1646,8 @@ async function openSOSearch(){
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" onclick="loadSO('${so.id || so.number}')">Preview</button>
-          <button class="ok" onclick="applySO('${so.id || so.number}')">Apply</button>
+          <button class="ok"    data-so-id="${r.id || r.Id}">Apply</button>
+          <button class="ghost" data-so-preview="${r.id || r.Id}">Preview</button>
         </div>
       </div>
     `).join('');
@@ -2512,16 +2514,24 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
 })();
 </script>
 <script>
-// one handler for all "Apply" clicks in the SO results list
-(function () {
-  const el = document.getElementById('cloneResults');
-  if (!el) return;
-  el.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-so-id]');
-    if (!btn) return;
-    applySO(btn.dataset.soId); // you already have load+apply combo
-  });
-}());
+const list = document.getElementById('cloneResults');
+if (!list) return;
+list.addEventListener('click', (e) => {
+  const applyBtn = e.target.closest('button[data-so-id]');
+  if (applyBtn) {
+    const id = applyBtn.dataset.soId;
+    if (!id || id === 'undefined') { alert('Missing id'); return; }
+    applySO(id);     // loads details + applies to form
+    return;
+  }
+  const prevBtn = e.target.closest('button[data-so-preview]');
+  if (prevBtn) {
+    const id = prevBtn.dataset.soPreview;
+    if (!id || id === 'undefined') { alert('Missing id'); return; }
+    loadSO(id);      // loads details into preview textarea
+  }
+});
+
 
 </script>
 <script>
@@ -2534,40 +2544,44 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
   }
 
   // one handler for all "Add" clicks in the Item results list
+<script>
 (function () {
   const el = document.getElementById('itemResults');
   if (!el) return;
   el.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-item]');
     if (!btn) return;
-    const payload = JSON.parse(btn.dataset.item);
-    addItemFromSearch(payload);  // addItemFromSearch already closes the drawer
+    const r = JSON.parse(btn.dataset.item);
+    addItemFromSearch(r);
   });
 }());
 
+// search row -> items table
+function addItemFromSearch(r){
+  addRow({
+    desc:  r.description || r.name || '',
+    model: r.mfgPart || '',
+    sku:   r.sku || '',
+    qty:   1,
+    msrp:  r.price || '',
+    sell:  r.price || ''
+  });
+  document.querySelector('[data-tab="Items"]')?.click?.(); // optional: show the tab
+}
+</script>
+</body>
 
-  // map item search row -> your table
-  function addItemFromSearch(r){
-    addRow({
-      desc: r.description || r.name || '',
-      model: r.mfgPart || '',
-      sku: r.sku || '',
-      qty: 1,
-      msrp: r.price || '',
-      sell: r.price || ''
-    });
-  }
 </script>
   <script>
-(function(){
-  const el = document.getElementById('wcpResults'); // container that holds customer results
+(function () {
+  const el = document.getElementById('wcpResults'); // customer results container
   if (!el) return;
   el.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-cust-id]');
     if (!btn) return;
     try {
       const data = await api(`/ordertime/customers/${encodeURIComponent(btn.dataset.custId)}`);
-      applyCustomerFromApi(data);      // your existing mapper → form
+      applyCustomerFromApi(data);   // your existing mapper fills Billing/Shipping/Payment
       closeDrawer('drawerWCP');
     } catch (err) {
       alert('Load customer failed: ' + err.message);
