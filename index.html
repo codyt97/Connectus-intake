@@ -1354,15 +1354,15 @@ async function openOTSearch(){
         <div><strong>${r.company || '—'}</strong></div>
         <div class="tiny">${r.city || ''} ${r.state || ''} ${r.zip || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok" data-cust-id="${r.id || r.Id}">Apply</button>
+          <button class="ok" data-so-id=="${r.id || r.Id}">Apply</button>
         </div>
       </div>
     `).join('');
 
     // Wire up Apply buttons to fetch full record then paste to form
-    target.querySelectorAll('[data-cust-id]').forEach(btn => {
+    target.querySelectorAll('[data-so-id=]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const id = e.currentTarget.getAttribute('data-cust-id');
+        const id = e.currentTarget.getAttribute('data-so-id=');
         try{
           const full = await api(`/ordertime/customers/${encodeURIComponent(id)}`);
           applyCustomerFromApi(full);
@@ -1449,14 +1449,13 @@ async function openItemSearch(){
         <div class="tiny">${r.mfgPart ? r.mfgPart : ''}${r.upc ? (' • UPC ' + r.upc) : ''}</div>
         <div class="tiny">${r.description || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" data-item='${JSON.stringify({
-           name: r.name || r.sku || r.mfgPart || "Item",
-             description: r.description || "",
-             mfgPart: r.mfgPart || "",
-             sku: r.sku || r.number || "",
-             price: Number(r.price || 0)
-             }).replace(/'/g,"&#39;")}'>Add</button>
-
+         <button class="ghost" data-item='${JSON.stringify({
+            name: r.name || r.sku || r.mfgPart || "Item",
+            description: r.description || "",
+            mfgPart: r.mfgPart || r.model || "",
+            sku: r.sku || r.number || "",
+            price: Number(r.price || 0)
+            }).replace(/'/g,"&#39;")}'>Add</button>
         </div>
       </div>
     `).join('');
@@ -1605,14 +1604,13 @@ async function openSOSearch(){
       target.innerHTML = 'No matches.'; return;
     }
     // render small cards with Preview + Apply
-    target.innerHTML = results.slice(0,25).map(so => `
+    target.innerHTML = results.slice(0,25).map(r => `
       <div class="card" style="margin:6px 0;padding:10px">
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${so.id || so.number}">Apply</button>
-          <button class="ghost" data-so-preview="${so.id || so.number}">Preview</button>
-
+          <button class="ok"    data-so-id="${so.id || so.number || so.Id}">Apply</button>
+          <button class="ghost" data-so-preview="${so.id || so.number || so.Id}">Preview</button>
         </div>
       </div>
     `).join('');
@@ -2479,23 +2477,16 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
 })();
 </script>
 <script>
-const list = document.getElementById('cloneResults');
-if (!list) return;
-list.addEventListener('click', (e) => {
-  const applyBtn = e.target.closest('button[data-so-id]');
-  if (applyBtn) {
-    const id = applyBtn.dataset.soId;
-    if (!id || id === 'undefined') { alert('Missing id'); return; }
-    applySO(id);     // loads details + applies to form
-    return;
-  }
-  const prevBtn = e.target.closest('button[data-so-preview]');
-  if (prevBtn) {
-    const id = prevBtn.dataset.soPreview;
-    if (!id || id === 'undefined') { alert('Missing id'); return; }
-    loadSO(id);      // loads details into preview textarea
-  }
-});
+(function () {
+  const list = document.getElementById('cloneResults');
+  if (!list) return;
+  list.addEventListener('click', (e) => {
+    const applyBtn = e.target.closest('button[data-so-id]');
+    if (applyBtn) { applySO(applyBtn.dataset.soId); return; }
+    const prevBtn = e.target.closest('button[data-so-preview]');
+    if (prevBtn)  { loadSO(prevBtn.dataset.soPreview); }
+  });
+}());
 
 
 </script>
@@ -2511,6 +2502,7 @@ list.addEventListener('click', (e) => {
   // one handler for all "Add" clicks in the Item results list
 
 // one handler for all "Add" clicks in the Item results list
+<script>
 (function () {
   const el = document.getElementById('itemResults');
   if (!el) return;
@@ -2522,8 +2514,9 @@ list.addEventListener('click', (e) => {
   });
 }());
 
-// search row -> items table
+// search row -> your items grid
 function addItemFromSearch(r){
+  // if your addRow supports these keys, this lands in Description/Model/SKU/Qty/MSRP/Sell
   addRow({
     desc:  r.description || r.name || '',
     model: r.mfgPart || '',
@@ -2532,27 +2525,30 @@ function addItemFromSearch(r){
     msrp:  r.price || '',
     sell:  r.price || ''
   });
-  document.querySelector('[data-tab="Items"]')?.click?.(); // optional: show the tab
+  // optional: jump to Items tab so it’s visible
+  document.querySelector('[data-tab="Items"]')?.click?.();
 }
 </script>
-
-</script>
-  <script>
+<script>
 (function () {
-  const el = document.getElementById('wcpResults'); // customer results container
+  const el = document.getElementById('wcpResults');
   if (!el) return;
   el.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-cust-id]');
+    const btn = e.target.closest('button[data-so-id=]');
     if (!btn) return;
     try {
-      const data = await api(`/ordertime/customers/${encodeURIComponent(btn.dataset.custId)}`);
-      applyCustomerFromApi(data);   // your existing mapper fills Billing/Shipping/Payment
+      const id = btn.dataset.custId;
+      const full = await api(`/ordertime/customers/${encodeURIComponent(id)}`);
+      applyCustomerFromApi(full);
       closeDrawer('drawerWCP');
     } catch (err) {
-      alert('Load customer failed: ' + err.message);
+      showStatus('wcpStatus', 'Search failed: ' + (err?.message || err));
     }
   });
 }());
+</script>
+</body>
+
 </script>
 </body>
 </html>
