@@ -1,4 +1,5 @@
-import { otList } from '../_client';
+import { otPost } from '../../_ot';
+
 
 // Map OT item -> minimal UI card
 function toItemCard(x) {
