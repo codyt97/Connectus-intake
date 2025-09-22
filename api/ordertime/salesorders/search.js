@@ -1,41 +1,46 @@
-// /api/ordertime/salesorders/search.js
-import { otPost } from '../../_ot';
-
-export default async function handler(req, res) {
   try {
     const q = String(req.query.q || '').trim();
-    if (!q) return res.status(200).json([]);
+    if (!q) return res.status(200).json({ results: [] });
 
     const like = (prop) => ({
       PropertyName: prop,
-      FieldType: 1,
-      Operator: 12,
-      FilterValueArray: [q]
+      FieldType: 1,      // String
+      Operator: 12,      // Like
+      FilterValueArray: `%${q}%`
     });
 
-    const [byDoc, byCust] = await Promise.all([
-      otPost('/list', { Type: 7, NumberOfRecords: 25, PageNumber: 1, Filters: [like('DocNumber')] }),
-      otPost('/list', { Type: 7, NumberOfRecords: 25, PageNumber: 1, Filters: [like('CustomerRef.Name')] }).catch(() => ([])),
-    ]);
+    const body = {
+      Type: 115, // Item All
+      NumberOfRecords: 50,
+      PageNumber: 1,
+      Sortation: { PropertyName: 'Name', Direction: 1 }, // Asc
+      Filters: [
+        like('Name'),
+        like('Description'),
+        like('ManufacturerPartNo'),
+        like('UPC'),
+      ]
+    };
 
-    const rows = [
-      ...((byDoc?.result || byDoc?.Items || byDoc) || []),
-      ...((byCust?.result || byCust?.Items || byCust) || []),
-    ];
+    const r = await fetch(`${BASE}/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ApiKey: KEY },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(data));
 
-    const seen = new Set();
-    const out = rows
-      .filter(r => (seen.has(r.Id) ? false : (seen.add(r.Id), true)))
-      .map(r => ({
-        id: r.Id,
-        docNo: r.DocNumber || r.Number || r.DocNo || '',
-        customer: r.CustomerRef?.Name || '',
-        status: r.Status || r.DocStatus || '',
-        date: r.TxnDate || r.Date || ''
-      }));
-
-    res.status(200).json(out);
-  } catch (e) {
-    res.status(500).json({ error: 'SO search failed: ' + e.message });
+    const results = (data?.List || data || []).map(row => ({
+      id: row.Id ?? row.id,
+      name: row.Name ?? row.name,
+      description: row.Description ?? row.description,
+      upc: row.UPC ?? row.upc,
+      mfgPart: row.ManufacturerPartNo ?? row.manufacturerPartNo,
+      price: row.Price ?? row.price,
+      uom: row.UomRef?.Name ?? row.uom
+    }));
+    res.status(200).json({ results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Item search failed' });
   }
-}
