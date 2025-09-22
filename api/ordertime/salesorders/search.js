@@ -1,34 +1,41 @@
+// /api/ordertime/salesorders/search.js
 import { otPost } from '../../_ot';
-
-function toSOCard(x) {
-  return {
-    id: x.Id,
-    docNo: x.DocNumber || x.Number || x.DocNo || '',
-    status: x.Status || x.DocStatus || '',
-    customer: x.CustomerRef?.Name || '',
-    date: x.TxnDate || x.Date || '',
-    total: x.Total || x.GrandTotal || 0,
-  };
-}
 
 export default async function handler(req, res) {
   try {
-    const q = (req.query.q || '').trim();
-    if (!q) return res.status(400).json({ error: 'Missing q' });
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.status(200).json([]);
 
-    const filtersByDoc = [{ PropertyName: 'DocNumber', Operator: 12, FilterValueArray: q }]; // LIKE
-    const filtersByCust = [{ PropertyName: 'CustomerRef.Name', Operator: 12, FilterValueArray: q }];
+    const like = (prop) => ({
+      PropertyName: prop,
+      FieldType: 1,
+      Operator: 12,
+      FilterValueArray: [q]
+    });
 
     const [byDoc, byCust] = await Promise.all([
-      otList({ Type: 7, Filters: filtersByDoc, NumberOfRecords: 25 }),
-      otList({ Type: 7, Filters: filtersByCust, NumberOfRecords: 25 }).catch(() => ({ result: [] })),
+      otPost('/list', { Type: 7, NumberOfRecords: 25, PageNumber: 1, Filters: [like('DocNumber')] }),
+      otPost('/list', { Type: 7, NumberOfRecords: 25, PageNumber: 1, Filters: [like('CustomerRef.Name')] }).catch(() => ([])),
     ]);
 
-    const seen = new Set();
-    const merged = [...(byDoc.result || []), ...(byCust.result || [])].filter(i => (seen.has(i.Id) ? false : (seen.add(i.Id), true)));
+    const rows = [
+      ...((byDoc?.result || byDoc?.Items || byDoc) || []),
+      ...((byCust?.result || byCust?.Items || byCust) || []),
+    ];
 
-    res.json(merged.map(toSOCard));
+    const seen = new Set();
+    const out = rows
+      .filter(r => (seen.has(r.Id) ? false : (seen.add(r.Id), true)))
+      .map(r => ({
+        id: r.Id,
+        docNo: r.DocNumber || r.Number || r.DocNo || '',
+        customer: r.CustomerRef?.Name || '',
+        status: r.Status || r.DocStatus || '',
+        date: r.TxnDate || r.Date || ''
+      }));
+
+    res.status(200).json(out);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'SO search failed: ' + e.message });
   }
 }
