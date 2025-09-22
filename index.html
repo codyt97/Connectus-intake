@@ -1426,18 +1426,6 @@ function applyPastedCustomer(textareaId){
   refreshTotals();
 }
 
-function applyCustomerFromApi(r){
-  const data = {
-    company: r.company,
-    billing: r.billing,
-    shipping: r.shipping,
-    payment: r.payment,
-    shippingOptions: r.shippingOptions
-  };
-  document.getElementById('wcpPaste').value = JSON.stringify(data, null, 2);
-  applyPastedCustomer('wcpPaste');
-}
-
 
 
 // Items: search in OT and add to the Items table
@@ -2517,7 +2505,8 @@ list.addEventListener('click', (e) => {
   }
 
   // one handler for all "Add" clicks in the Item results list
-<script>
+
+// one handler for all "Add" clicks in the Item results list
 (function () {
   const el = document.getElementById('itemResults');
   if (!el) return;
@@ -2542,7 +2531,6 @@ function addItemFromSearch(r){
   document.querySelector('[data-tab="Items"]')?.click?.(); // optional: show the tab
 }
 </script>
-</body>
 
 </script>
   <script>
@@ -2562,8 +2550,5 @@ function addItemFromSearch(r){
   });
 }());
 </script>
-
-</body>
-
 </body>
 </html>
