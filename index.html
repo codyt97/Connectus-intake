@@ -1334,28 +1334,48 @@ document.getElementById('flagNewCustomer').addEventListener('change', e=>{
 
 /* ===== WCP helper ===== */
 async function openOTSearch(){
-  const q=(document.getElementById('wcpQuery').value||document.getElementById('billCompany').value||'').trim();
-  const target=document.getElementById('wcpResults');
-  if(!q){ target.innerHTML='Enter a query first.'; return; }
-  target.innerHTML='Searching…';
-  try{
-    const results = await api(`/ordertime/customers/search?q=${encodeURIComponent(q)}`);
-    if(!Array.isArray(results) || results.length===0){ target.innerHTML='No matches.'; return; }
-    target.innerHTML = results.slice(0,25).map(r=>`
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${r.company||'—'}</strong></div>
-        <div class="tiny">${r.city||''} ${r.state||''} ${r.zip||''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${so.id || so.number}">Apply</button>
-          <button class="ghost" data-so-preview="${so.id || so.number}">Preview</button>
+  const q = (document.getElementById('wcpQuery').value
+            || document.getElementById('billCompany').value
+            || '').trim();
+  const target = document.getElementById('wcpResults');
+  if (!q){ target.innerHTML = 'Enter a query first.'; return; }
+  target.innerHTML = 'Searching…';
 
+  try {
+    const results = await api(`/ordertime/customers/search?q=${encodeURIComponent(q)}`);
+    if (!Array.isArray(results) || results.length === 0){
+      target.innerHTML = 'No matches.'; 
+      return;
+    }
+
+    // Render list; note r.*, not so.*
+    target.innerHTML = results.slice(0, 25).map(r => `
+      <div class="card" style="margin:6px 0;padding:10px">
+        <div><strong>${r.company || '—'}</strong></div>
+        <div class="tiny">${r.city || ''} ${r.state || ''} ${r.zip || ''}</div>
+        <div class="row" style="margin-top:6px">
+          <button class="ok" data-cust-id="${r.id || r.Id}">Apply</button>
         </div>
       </div>
     `).join('');
-  }catch(err){
+
+    // Wire up Apply buttons to fetch full record then paste to form
+    target.querySelectorAll('[data-cust-id]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-cust-id');
+        try{
+          const full = await api(`/ordertime/customers/${encodeURIComponent(id)}`);
+          applyCustomerFromApi(full);
+        }catch(err){
+          alert(`Load customer failed: ${err.message}`);
+        }
+      });
+    });
+  } catch (err) {
     target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
   }
 }
+
 
 
 // Map a customer result into your existing form fields
