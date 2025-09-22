@@ -1,37 +1,43 @@
+// /api/ordertime/items/search.js
 import { otPost } from '../../_ot';
-
-
-// Map OT item -> minimal UI card
-function toItemCard(x) {
-  return {
-    id: x.Id,
-    name: x.Name || x.ItemName || x.Number || '',
-    number: x.Number || x.Sku || '',
-    uom: x.SalesUOMRef?.Name || x.UOMRef?.Name || '',
-    price: x.SalesPrice ?? x.Price ?? 0,
-    type: x.ItemType || x.Type || '',
-  };
-}
 
 export default async function handler(req, res) {
   try {
-    const q = (req.query.q || '').trim();
-    if (!q) return res.status(400).json({ error: 'Missing q' });
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.status(200).json([]);
 
-    // Item All list (RecordTypeEnum 115). Name LIKE q.
-    // If you’d like to include item number too, do a second call and merge.
-    const baseFilter = [{ PropertyName: 'Name', Operator: 12, FilterValueArray: q }]; // 12 = Like
-    const { result = [] } = await otList({ Type: 115, Filters: baseFilter, NumberOfRecords: 25 });
+    const like = (prop) => ({
+      PropertyName: prop,
+      FieldType: 1,
+      Operator: 12,
+      FilterValueArray: [q]
+    });
 
-    // optional: also search Number LIKE q, then merge uniques
-    const { result: byNumber = [] } = await otList({ Type: 115, Filters: [{ PropertyName: 'Number', Operator: 12, FilterValueArray: q }], NumberOfRecords: 25 })
-      .catch(() => ({ result: [] }));
+    const [byName, byNum] = await Promise.all([
+      otPost('/list', { Type: 115, NumberOfRecords: 25, PageNumber: 1, Filters: [like('Name')] }),
+      otPost('/list', { Type: 115, NumberOfRecords: 25, PageNumber: 1, Filters: [like('Number')] }).catch(() => ([])),
+    ]);
+
+    const rows = [
+      ...((byName?.result || byName?.Items || byName) || []),
+      ...((byNum?.result || byNum?.Items || byNum) || []),
+    ];
 
     const seen = new Set();
-    const merged = [...result, ...byNumber].filter(i => (seen.has(i.Id) ? false : (seen.add(i.Id), true)));
+    const out = rows
+      .filter(r => (seen.has(r.Id) ? false : (seen.add(r.Id), true)))
+      .map(x => ({
+        id: x.Id,
+        name: x.Name || x.ItemName || x.Number || '',
+        description: x.Description || '',
+        mfgPart: x.ManufacturerPartNo || '',
+        upc: x.UPC || '',
+        price: x.SalesPrice ?? x.Price ?? 0,
+        sku: x.Number || ''
+      }));
 
-    res.json(merged.map(toItemCard));
+    res.status(200).json(out);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Item search failed: ' + e.message });
   }
 }
