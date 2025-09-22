@@ -1455,8 +1455,9 @@ async function openSOSearch(){
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${r.id || r.Id}">Apply</button>
-          <button class="ghost" data-so-preview="${r.id || r.Id}">Preview</button>
+          <button class="ok"    data-so-id="${so.id || so.Id}">Apply</button>
+          <button class="ghost" data-so-preview="${so.id || so.Id}">Preview</button>
+
 
         </div>
       </div>
@@ -1646,8 +1647,8 @@ async function openSOSearch(){
         <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
         <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${r.id || r.Id}">Apply</button>
-          <button class="ghost" data-so-preview="${r.id || r.Id}">Preview</button>
+          <button class="ghost" data-cust-id="${r.id || r.Id}">Apply</button>
+          <button class="ghost" data-so-preview="${so.id || so.Id}">Preview</button>
         </div>
       </div>
     `).join('');
