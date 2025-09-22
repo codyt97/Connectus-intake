@@ -1345,7 +1345,7 @@ async function openOTSearch(){
         <div><strong>${r.company||'—'}</strong></div>
         <div class="tiny">${r.city||''} ${r.state||''} ${r.zip||''}</div>
         <div class="row" style="margin-top:6px">
-          <button class="ghost" data-so-id="${r.id || r.Id}">Apply</button>
+          <button class="ghost" data-cust-id="${r.id || r.Id}">Apply</button>
         </div>
       </div>
     `).join('');
