@@ -1348,35 +1348,29 @@ async function openOTSearch(){
       return;
     }
 
-    // Render list; note r.*, not so.*
-    target.innerHTML = results.slice(0, 25).map(r => `
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${r.company || '—'}</strong></div>
-        <div class="tiny">${r.city || ''} ${r.state || ''} ${r.zip || ''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ok" data-so-id=="${r.id || r.Id}">Apply</button>
-        </div>
-      </div>
-    `).join('');
+    // Render list; note correct data attribute
+target.innerHTML = results.slice(0, 25).map(r => `
+  <div class="card" style="margin:6px 0;padding:10px">
+    <div><strong>${r.company || '—'}</strong></div>
+    <div class="tiny">${r.city || ''} ${r.state || ''} ${r.zip || ''}</div>
+    <div class="row" style="margin-top:6px">
+      <button class="ok" data-cust-id="${r.id || r.Id}">Apply</button>
+    </div>
+  </div>
+`).join('');
 
-    // Wire up Apply buttons to fetch full record then paste to form
-    target.querySelectorAll('[data-so-id=]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const id = e.currentTarget.getAttribute('data-so-id=');
-        try{
-          const full = await api(`/ordertime/customers/${encodeURIComponent(id)}`);
-          applyCustomerFromApi(full);
-        }catch(err){
-          alert(`Load customer failed: ${err.message}`);
-        }
-      });
-    });
-  } catch (err) {
-    target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
-  }
-}
-
-
+// Wire up Apply buttons
+target.querySelectorAll('button[data-cust-id]').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const id = e.currentTarget.getAttribute('data-cust-id');
+    try{
+      const full = await api(`/ordertime/customers/${encodeURIComponent(id)}`);
+      applyCustomerFromApi(full);
+    }catch(err){
+      alert(`Load customer failed: ${err.message}`);
+    }
+  });
+});
 
 // Map a customer result into your existing form fields
 function applyCustomerFromApi(r){
@@ -1450,12 +1444,13 @@ async function openItemSearch(){
         <div class="tiny">${r.description || ''}</div>
         <div class="row" style="margin-top:6px">
          <button class="ghost" data-item='${JSON.stringify({
-            name: r.name || r.sku || r.mfgPart || "Item",
-            description: r.description || "",
-            mfgPart: r.mfgPart || r.model || "",
-            sku: r.sku || r.number || "",
-            price: Number(r.price || 0)
-            }).replace(/'/g,"&#39;")}'>Add</button>
+  name: r.name || r.sku || r.mfgPart || "Item",
+  description: r.description || "",
+  mfgPart: r.mfgPart || "",
+  sku: r.sku || r.number || "",
+  price: Number(r.price || 0)
+}).replace(/'/g,"&#39;")}'>Add</button>
+
         </div>
       </div>
     `).join('');
@@ -1604,16 +1599,17 @@ async function openSOSearch(){
       target.innerHTML = 'No matches.'; return;
     }
     // render small cards with Preview + Apply
-    target.innerHTML = results.slice(0,25).map(r => `
-      <div class="card" style="margin:6px 0;padding:10px">
-        <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
-        <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
-        <div class="row" style="margin-top:6px">
-          <button class="ok"    data-so-id="${so.id || so.number || so.Id}">Apply</button>
-          <button class="ghost" data-so-preview="${so.id || so.number || so.Id}">Preview</button>
-        </div>
-      </div>
-    `).join('');
+    target.innerHTML = results.slice(0,25).map(so => `
+  <div class="card" style="margin:6px 0;padding:10px">
+    <div><strong>${so.number || so.id || 'SO'}</strong> — ${so.customerName || ''}</div>
+    <div class="tiny">${so.date || ''} • ${so.status || ''}</div>
+    <div class="row" style="margin-top:6px">
+      <button class="ghost" onclick="loadSO('${so.id || so.number}')">Preview</button>
+      <button class="ok"    onclick="applySO('${so.id || so.number}')">Apply</button>
+    </div>
+  </div>
+`).join('');
+
   }catch(err){
     target.innerHTML = `<span style="color:#b45309">Search failed: ${err.message}</span>`;
   }
@@ -2502,7 +2498,9 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
   // one handler for all "Add" clicks in the Item results list
 
 // one handler for all "Add" clicks in the Item results list
-<script>
+
+ <script>
+// Handle all "Add" clicks in the Items search drawer
 (function () {
   const el = document.getElementById('itemResults');
   if (!el) return;
@@ -2514,21 +2512,42 @@ document.getElementById('btnSubmitIntake')?.addEventListener('click', async ()=>
   });
 }());
 
-// search row -> your items grid
+// Map search result -> your Items table
 function addItemFromSearch(r){
-  // if your addRow supports these keys, this lands in Description/Model/SKU/Qty/MSRP/Sell
-  addRow({
-    desc:  r.description || r.name || '',
-    model: r.mfgPart || '',
-    sku:   r.sku || '',
-    qty:   1,
-    msrp:  r.price || '',
-    sell:  r.price || ''
-  });
-  // optional: jump to Items tab so it’s visible
-  document.querySelector('[data-tab="Items"]')?.click?.();
+  // Prefer your existing addRow helper if you have it
+  if (typeof addRow === 'function') {
+    addRow({
+      desc:  r.description || r.name || '',
+      model: r.mfgPart || '',
+      sku:   r.sku || '',
+      qty:   1,
+      msrp:  r.price || '',
+      sell:  r.price || ''
+    });
+    // optional: jump to Items tab so the new line is visible
+    document.querySelector('[data-tab="Items"]')?.click?.();
+    return;
+  }
+
+  // Fallback: click "+ Add Line" then fill the last line
+  document.querySelector('button, .btn, [data-action="add-line"]')?.click?.(); // your + Add Line button
+  const rows = document.querySelectorAll('[data-items-row], .items-line, .item-row'); // adjust to your row selector
+  const row = rows[rows.length - 1];
+  if (!row) return;
+
+  // Fill common columns (adjust selectors to your markup if different)
+  row.querySelector('input[placeholder*="Apple iPad"], input[name*="desc"], input[data-field="desc"]')?.value = (r.description || r.name || '');
+  row.querySelector('input[placeholder*="Model"], input[name*="model"], input[data-field="model"]')?.value = (r.mfgPart || '');
+  row.querySelector('input[placeholder*="Color"], input[name*="color"], input[data-field="color"]')?.value = '';
+  row.querySelector('input[placeholder*="ORDERTIME-SKU"], input[name*="sku"], input[data-field="sku"]')?.value = (r.sku || '');
+  row.querySelector('input[type="number"][name*="qty"], input[data-field="qty"]')?.value = 1;
+  row.querySelector('input[name*="msrp"], input[data-field="msrp"]')?.value = (r.price || '');
+  row.querySelector('input[name*="sell"], input[data-field="sell"]')?.value = (r.price || '');
 }
 </script>
+</body>
+
+  
 <script>
 (function () {
   const el = document.getElementById('wcpResults');
@@ -2546,9 +2565,6 @@ function addItemFromSearch(r){
     }
   });
 }());
-</script>
-</body>
-
 </script>
 </body>
 </html>
