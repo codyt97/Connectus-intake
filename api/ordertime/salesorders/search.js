@@ -1,4 +1,4 @@
-import { otList } from '../_client';
+import { otPost } from '../../_ot';
 
 function toSOCard(x) {
   return {
