@@ -40,4 +40,68 @@ async function post(path, body) {
 
 async function get(path) {
   assertEnv();
-  const res = await fetch(`${
+  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`OT GET ${path} ${res.status}: ${text}`);
+  return safeJSON(text) ?? text;
+}
+
+// Export a generic poster so all routes share the same working auth
+export async function otPost(path, body) { return post(path, body); }
+export async function otGet(path) { return get(path); }
+
+// Normalized customer-by-id (used by WCP "Apply")
+export async function getCustomerById(id) {
+  const x = await get(`/customer?id=${encodeURIComponent(id)}`);
+
+  const bill = x.BillAddress || x.BillingAddress || {
+    Contact: x.BillingContact, Phone: x.BillingPhone, Email: x.BillingEmail,
+    Addr1: x.BillingAddress1 || x.BillingAddress, Addr2: x.BillingAddress2,
+    City: x.BillingCity, State: x.BillingState, Zip: x.BillingZip
+  };
+  const ship = x.ShipAddress || x.ShipToAddress || {
+    Contact: x.ShipToContact, Phone: x.ShipToPhone, Email: x.ShipToEmail,
+    Addr1: x.ShipToAddress1, Addr2: x.ShipToAddress2,
+    City: x.ShipToCity, State: x.ShipToState, Zip: x.ShipToZip,
+    IsResidential: x.ShipToIsResidential
+  };
+
+  return {
+    company: x.Company || x.CompanyName || x.Name || '',
+    billing: {
+      contact: bill?.Contact || '',
+      phone:   bill?.Phone   || '',
+      email:   bill?.Email   || '',
+      street:  bill?.Addr1   || '',
+      suite:   bill?.Addr2   || '',
+      city:    bill?.City    || '',
+      state:   bill?.State   || '',
+      zip:     bill?.Zip     || ''
+    },
+    shipping: {
+      company: x.ShipToCompany || x.Company || '',
+      contact: ship?.Contact || '',
+      phone:   ship?.Phone   || '',
+      email:   ship?.Email   || '',
+      street:  ship?.Addr1   || '',
+      suite:   ship?.Addr2   || '',
+      city:    ship?.City    || '',
+      state:   ship?.State   || '',
+      zip:     ship?.Zip     || '',
+      residence: !!ship?.IsResidential
+    },
+    payment: {
+      method: x.DefaultPaymentMethod || '',
+      terms:  x.PaymentTerms || '',
+      taxExempt: !!x.IsTaxExempt,
+      agreement: !!x.HasPurchaseAgreement,
+    },
+    shippingOptions: {
+      pay:   x.DefaultShipPaymentMethod || '',
+      speed: x.DefaultShipSpeed || '',
+      shortShip: x.ShortShipPolicy || '',
+    },
+    carrierRep: { name: x.CarrierRepName || '', email: x.CarrierRepEmail || '' },
+    rep:        { primary: x.PrimaryRepName || '', secondary: x.SecondaryRepName || '' },
+  };
+}
